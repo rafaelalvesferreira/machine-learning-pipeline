@@ -150,10 +150,9 @@ print(classification_report(y, clf_predictions))
 ## Conclusion
 
 After analyzing the target and the dataset provided we can conclude that we're
-able to deploy a wine rating prediction with confidence.
-Our proof of concept showed us that after our model analyzes and be applied to
-the supplied data it returned us a high confidence model, with an average of 96% 
-precision and recall.
+able to deploy a wine rating prediction with confidence. 
+The proof of concept confirmed that the model can deliver an average of 96% of 
+precision, recall, and F1-score.
 We're sure that the model can meet your needs to optimize your stock.
 
 
