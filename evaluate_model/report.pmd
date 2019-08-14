@@ -1,0 +1,160 @@
+% Wine Rating Prediction
+% Data Revenue
+% 13th August 2019
+
+```python echo=False, complete=True
+# setting prerequisites to analysis
+
+import dask.dataframe as dd
+import joblib
+from joblib import load
+from sklearn.ensemble import RandomForestClassifier
+import pandas as pd
+import matplotlib.pyplot as plt 
+
+in_dir = '/usr/share/data/'
+in_csv = 'wine_dataset'
+in_parquet = 'test'
+model_name = 'trained_model'
+
+# load the sample data set for graph creation
+df = pd.read_csv(f'{in_dir}/raw/{in_csv}.csv')
+# calculate the quantiles of points to be the rating standards
+min_point = df['points'].min()
+rating_one = df['points'].quantile(0.1)
+rating_two = df['points'].quantile(0.3)
+rating_three = df['points'].quantile(0.7)
+rating_four = df['points'].quantile(0.9)
+max_point = df['points'].max()
+
+# function to apply the rating to the points feature
+def rating_the_points(points):
+    if points <= rating_one:
+        return 1
+    if points <= rating_two:
+        return 2
+    if points <= rating_three:
+        return 3
+    if points <= rating_four:
+        return 4
+    if points <= max_point:
+        return 5
+    else:
+        raise ValueError('Input value out of range')
+
+# apply function rating_the_points to de dataframe
+df['wine_rating'] = df['points'].apply(lambda x: rating_the_points(x))
+
+# load test set as dask Dataframe
+ddf = dd.read_parquet(f'{in_dir}/dataset/{in_parquet}.parquet',
+                      engine='fastparquet')
+
+# create features and labels0
+y = ddf['wine_rating']
+X = ddf.drop(['wine_rating'], axis=1)
+
+# load serialized model
+clf = load(f'{in_dir}/model/{model_name}.joblib')
+
+# predict labels
+clf_predictions = clf.predict(X)
+
+````
+
+## Introduction
+
+This application was designed using the [Data Revenue](https://www.datarevenue.com/)
+pipeline. 
+
+We intend to present you with a proof of concept we designed 
+especially for the data that your company provided to us.
+
+### Target
+
+Our target requested was to create a rating predictor for the wine inventory.
+
+We suggest the creation of a five-class rating (five stars) based on the points
+received, it is widely used and very intuitive.
+
+The actual distribution of the points can be seen below:
+```python echo=False, complete=True
+n, bins, patches = plt.hist(df.points, bins=5, facecolor='g', alpha=0.7)
+
+plt.xlabel('Wine Points')
+plt.ylabel('Count')
+plt.title('Histogram of Points')
+plt.grid(True)
+```
+
+To perform a transformation from point to stars we applied a transformation 
+based on the distribution of the points. We'll bin the points based on their 
+quartiles in a way that the distribution of the stars is the same as the points.
+```python echo=False, complete=True
+n, bins, patches = plt.hist(df.wine_rating, bins=5, facecolor='g', alpha=0.7)
+
+plt.xlabel('Wine Rating')
+plt.ylabel('Count')
+plt.title('Histogram of Rating')
+plt.grid(True)
+```
+
+### Selected model
+
+After a deep study on the data provided we were able to determine that the best
+prediction model for your case is the **Random Forests Classifier**.
+
+Random Forest Classifier is ensemble algorithm. Ensembled algorithms are those
+which combines more than one algorithms of same or different kind for classifying 
+objects. 
+
+Random Forest Classifier creates a set of decision trees from randomly selected 
+subset of training set. It then aggregates the votes from different decision
+trees to decide the final class of the test object.
+
+Suppose training set is given as: [X1, X2, X3, X4] with corresponding labels as
+[L1, L2, L3, L4], random forest may create three decision trees taking input of
+subset for example,
+
+1 - [X1, X2, X3]
+
+2 - [X1, X2, X4]
+
+3 - [X2, X3, X4]
+
+So finally, it predicts based on the majority of votes from each of the decision 
+trees made.
+
+
+
+### Model Results
+
+After trained a model is able to determine the wine rating given the inputs.
+
+Our model can be evaluated by three metrics:
+
+- Precision: Precision talks about how precise/accurate your model is. Out 
+of those predicted positive, how many of them are actual positive.
+   
+- Recall: Recall actually calculates how many of the Actual Positives our 
+model capture through labeling it as Positive (True Positive).
+
+- f1-score: F1 Score is needed when you want to seek a balance between 
+Precision and Recall. 
+
+**Our results for this model are:**
+```python echo=False, complete=True
+from sklearn.metrics import confusion_matrix, classification_report
+print(classification_report(y, clf_predictions))
+```
+
+## Conclusion
+
+After analyzing the target and the dataset provided we can conclude that we're
+able to deploy a wine rating prediction with confidence.
+Our proof of concept showed us that after our model analyzes and be applied to
+the supplied data it returned us a high confidence model, with an average of 96% 
+precision and recall.
+We're sure that the model can meet your needs to optimize your stock.
+
+
+
