@@ -57,7 +57,9 @@ class DownloadData(DockerTask):
 
 class MakeDatasets(DockerTask):
 
-    out_dir = luigi.Parameter()
+    fname = luigi.Parameter(default='wine_dataset')
+    out_dir = luigi.Parameter(default='/usr/share/data/dataset/')
+    in_dir = luigi.Parameter(default='/usr/share/data/raw/')
 
     @property
     def image(self):
@@ -70,9 +72,77 @@ class MakeDatasets(DockerTask):
     def command(self):
         # TODO: implement correct command
         # Try to get the input path from self.requires() ;)
-        pass
+        return ['python', 'dataset.py',
+                '--in-csv', f'{self.fname}.csv',
+                '--out-dir', f'{self.out_dir}',
+                '--in-dir', f'{self.in_dir}']
 
     def output(self):
+        out_dir = Path(self.out_dir)
+        out_dir.mkdir(parents=True, exist_ok=True)
+
         return luigi.LocalTarget(
             path=str(Path(self.out_dir) / '.SUCCESS')
         )
+
+
+class TrainModel(DockerTask):
+
+    fname = luigi.Parameter(default='train')
+    out_dir = luigi.Parameter(default='/usr/share/data/model/')
+    in_dir = luigi.Parameter(default='/usr/share/data/dataset/')
+
+    @property
+    def image(self):
+        return f'code-challenge/train-model:{VERSION}'
+
+    def requires(self):
+        return MakeDatasets()
+
+    @property
+    def command(self):
+        return ['python', 'train.py',
+                '--in-parquet', f'{self.fname}',
+                '--out-dir', f'{self.out_dir}',
+                '--in-dir', f'{self.in_dir}']
+
+    def output(self):
+        out_dir = Path(self.out_dir)
+        out_dir.mkdir(parents=True, exist_ok=True)
+
+        return luigi.LocalTarget(
+            path=str(Path(self.out_dir) / '.SUCCESS')
+        )
+
+
+class EvaluateModel(DockerTask):
+
+    fname = luigi.Parameter(default='test')
+    in_csv = luigi.Parameter(default='wine_dataset')
+    out_dir = luigi.Parameter(default='/usr/share/data/evaluate/')
+    in_dir = luigi.Parameter(default='/usr/share/data/')
+    model_name = luigi.Parameter(default='trained_model')
+
+    @property
+    def image(self):
+        return f'code-challenge/evaluate-model:{VERSION}'
+
+    def requires(self):
+        return TrainModel()
+
+    @property
+    def command(self):
+        return ['python', 'evaluate.py',
+                '--in-parquet', f'{self.fname}',
+                '--in-csv', f'{self.in_csv}',
+                '--out-dir', f'{self.out_dir}',
+                '--in-dir', f'{self.in_dir}',
+                '--model-name', f'{self.model_name}']
+
+    def output(self):
+        out_dir = Path(self.out_dir)
+        out_dir.mkdir(parents=True, exist_ok=True)
+
+        return luigi.LocalTarget(
+            path=str(Path(self.out_dir) / '.SUCCESS')
+            )
